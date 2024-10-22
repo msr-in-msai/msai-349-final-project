@@ -1,37 +1,38 @@
-# Discussion for final proposal
+# Final Project Proposal
 
-## 1. What task will you address, and why is it interesting? This should be as simple as a couple of sentences.
+## 1. Task Description and Motivation
 
-### What task will you address?
-Pointcloud Classification. 
-* Input: the pointcloud of an object (a set of 3d points).
-* Output: the class label of the object, out of fixed amount of classes (like 10).
+### Task:
+Point cloud classification.  
+* **Input:** A set of 3D points (point cloud) representing an object.  
+* **Output:** The object's class label, chosen from a fixed number of predefined classes (e.g., 10 classes).
 
-### why is it interesting?
-It's relevant to our field of robotics. We can specify objects only using data from LiDAR. 
+### Motivation:
+This task is critical in robotics, where we often need to classify objects using 3D data from sensors like LiDAR. Being able to accurately classify objects based solely on point clouds is essential for tasks like autonomous navigation, object manipulation, and environment understanding.
 
-## 2. How will you acquire your data? This element is intended to serve as a check that your project is doable -- so if you plan to collect a new data set (which I discourage), be as specific as possible.
+## 2. Data Acquisition
 
-### How will you acquire your data?
-Use a simulator (Isaac Sim) to generate the dataset. The dataset contains multiple depth images, segmentation masks, the object label of every pixel in the depth image, and camera intrinsics to convert depth images to pointclouds.
+I will generate the dataset using Isaac Sim, which provides a flexible environment for creating synthetic data. The dataset will include:
+* Depth images.
+* Segmentation masks for each object.
+* Object labels for every pixel in the depth images.
+* Camera intrinsics to convert depth images into point clouds.
 
-## 3. Which features/attributes will you use for your task?
+This approach ensures that the data generation is well-structured, reproducible, and tailored to my project's needs.
 
-Each feature is a list of 3D points (The point cloud).
+## 3. Features and Attributes
 
-## 4. What will your initial approach be? What data pre-processing will you do, which machine learning techniques (decision trees, KNN, K-Means, Gaussian mixture models, etc.) will you use, and how will you evaluate your success (Note: you must use a quantitative metric)? Generally, you will likely use mean-squared error for regression tasks and precision-recall for classification tasks. Think about how you will organize your model outputs to calculate these metrics.
+The key feature for this task is the 3D point cloud representing each object. Each point cloud is a collection of points in 3D space that captures the object's shape and spatial distribution.
 
-### What will your initial approach be?
-Use MLP to calssify the object.
+## 4. Initial Approach
 
-### What data pre-processing will you do?
-1. Convert depth image to pointcloud with camera intrinsics.
-2. Get the pointcloud corresponding to every kind of obejct based on the segmentation image (mask).
-3. Extract representation features from pointclouds using PointNet. 
+### Data Preprocessing:
+1. Convert depth images into point clouds using the provided camera intrinsics.
+2. Segment the point cloud by extracting the portion corresponding to each object based on the segmentation mask.
+3. Use PointNet to extract representative features from the point clouds.
 
-### which machine learning techniques (decision trees, KNN, K-Means, Gaussian mixture models, etc.) will you use?
-Use the representation features as input to train the MLP to classify objects.
+### Machine Learning Techniques:
+The extracted features from PointNet will serve as input to an MLP (Multi-Layer Perceptron), which will be trained to classify objects into their respective categories.
 
-### How will you evaluate your success?
-
-Use the sucess rate of the classification.
+### Evaluation:
+The primary evaluation metric will be the classification accuracy, measuring the percentage of correctly classified objects.
