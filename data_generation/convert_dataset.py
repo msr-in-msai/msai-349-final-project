@@ -226,7 +226,7 @@ class ConvertDataset:
                                  num_new_points: int,
                                  num_knn_neighbours: int = 3):
         """
-        Interpolate point cloud.
+        Interpolate point cloud with KNN.
 
         Args:
             points (numpy.ndarray): Point cloud.
