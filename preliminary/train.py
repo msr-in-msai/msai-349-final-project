@@ -28,14 +28,10 @@ class PointCloudDataset(Dataset):
         return points, label
 
 def train_pointnet(model, train_loader, num_epochs=100, learning_rate=0.001, device='cuda'):
-    # Move model to device
     model = model.to(device)
-    
-    # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
-    # Training loop
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -43,12 +39,10 @@ def train_pointnet(model, train_loader, num_epochs=100, learning_rate=0.001, dev
         total = 0
         
         for batch_idx, (points, labels) in enumerate(train_loader):
-            # Move data to device
+            # Move to device and ensure correct shape (B, C, N)
             points = points.to(device)
             labels = labels.to(device)
-            
-            # Ensure points are in correct shape (B, C, N)
-            points = points.permute(0, 2, 1)
+            points = points.permute(0, 2, 1)  # (B, N, 3) -> (B, 3, N)
             
             # Forward pass
             outputs = model(points)
@@ -69,14 +63,13 @@ def train_pointnet(model, train_loader, num_epochs=100, learning_rate=0.001, dev
                 print(f'Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], '
                       f'Loss: {loss.item():.4f}, Acc: {100.*correct/total:.2f}%')
         
-        # Print epoch statistics
         print(f'Epoch [{epoch+1}/{num_epochs}], Average Loss: {total_loss/len(train_loader):.4f}, '
               f'Accuracy: {100.*correct/total:.2f}%')
-        
+    
     return model
 
+
 def main():
-    # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
     
@@ -84,12 +77,9 @@ def main():
     dataset = PointCloudDataset('data_generation/output.csv')
     train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
     
-    # Initialize model
-    model = PointNet()
-    
-    # Number of classes based on unique labels
+    # Initialize model with correct number of classes
     num_classes = len(dataset.label_encoder.classes_)
-    model.mlp3_3 = nn.Linear(256, num_classes)  # Update last layer to match number of classes
+    model = PointNet(num_classes=num_classes)
     
     # Train model
     trained_model = train_pointnet(
