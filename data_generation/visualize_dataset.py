@@ -70,6 +70,5 @@ class DatasetVisualizer:
 
 
 vis = DatasetVisualizer(
-    '/home/zhengxiao-han/courses/msai349/' +
-    'msai-349-final-project/data_generation/output.csv')
-vis.visualize_data(data_index=17)
+    'data_generation/output.csv')
+vis.visualize_data(data_index=15)
