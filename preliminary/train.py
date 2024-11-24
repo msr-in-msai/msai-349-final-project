@@ -7,6 +7,10 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import LabelEncoder
 import ast
 from model import PointNet
+from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
+
 
 class PointCloudDataset(Dataset):
     def __init__(self, csv_file):
@@ -31,40 +35,47 @@ def train_pointnet(model, train_loader, num_epochs=100, learning_rate=0.001, dev
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    
-    for epoch in range(num_epochs):
-        model.train()
-        total_loss = 0
-        correct = 0
-        total = 0
-        
-        for batch_idx, (points, labels) in enumerate(train_loader):
-            # Move to device and ensure correct shape (B, C, N)
-            points = points.to(device)
-            labels = labels.to(device)
-            points = points.permute(0, 2, 1)  # (B, N, 3) -> (B, 3, N)
+
+    with tqdm(total=num_epochs*len(train_loader), desc="Processing files") as pbar:
+        for epoch in range(num_epochs):
+            model.train()
+            total_loss = 0
+            correct = 0
+            total = 0
             
-            # Forward pass
-            outputs = model(points)
-            loss = criterion(outputs, labels)
+            for batch_idx, (points, labels) in enumerate(train_loader):
+                # Move to device and ensure correct shape (B, C, N)
+                points = points.to(device)
+                labels = labels.to(device)
+                points = points.permute(0, 2, 1)  # (B, N, 3) -> (B, 3, N)
+                
+                # Forward pass
+                outputs = model(points)
+                loss = criterion(outputs, labels)
+                
+                # Backward pass and optimize
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                
+                # Statistics
+                total_loss += loss.item()
+                _, predicted = outputs.max(1)
+                total += labels.size(0)
+                correct += predicted.eq(labels).sum().item()
+
+                writer.add_scalar("Loss/train", loss.item(), epoch)
+                writer.add_scalar("Acc/train", correct/total, epoch)
+
+                # Print progress
+                pbar.update(1)
+
+                # if (batch_idx + 1) % 10 == 0:
+                #     print(f'Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], '
+                #         f'Loss: {loss.item():.4f}, Acc: {100.*correct/total:.2f}%')
             
-            # Backward pass and optimize
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            
-            # Statistics
-            total_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += labels.size(0)
-            correct += predicted.eq(labels).sum().item()
-            
-            if (batch_idx + 1) % 10 == 0:
-                print(f'Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], '
-                      f'Loss: {loss.item():.4f}, Acc: {100.*correct/total:.2f}%')
-        
-        print(f'Epoch [{epoch+1}/{num_epochs}], Average Loss: {total_loss/len(train_loader):.4f}, '
-              f'Accuracy: {100.*correct/total:.2f}%')
+            # print(f'Epoch [{epoch+1}/{num_epochs}], Average Loss: {total_loss/len(train_loader):.4f}, '
+            #       f'Accuracy: {100.*correct/total:.2f}%')
     
     return model
 
@@ -74,21 +85,24 @@ def main():
     print(f"Using device: {device}")
     
     # Create dataset and dataloader
-    dataset = PointCloudDataset('data_generation/output.csv')
+    dataset = PointCloudDataset('data_generation/train.csv')
     train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+    print('Dataset loaded!')
     
     # Initialize model with correct number of classes
     num_classes = len(dataset.label_encoder.classes_)
     model = PointNet(num_classes=num_classes)
-    
+    print('Model initialized!')
+
     # Train model
     trained_model = train_pointnet(
         model=model,
         train_loader=train_loader,
-        num_epochs=100,
+        num_epochs=1000,
         learning_rate=0.001,
         device=device
     )
+    writer.flush()
     
     # Save model
     torch.save(trained_model.state_dict(), 'pointnet_model.pth')

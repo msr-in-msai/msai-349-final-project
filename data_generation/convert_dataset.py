@@ -11,6 +11,8 @@ import numpy as np
 
 from sklearn.neighbors import NearestNeighbors
 
+from tqdm import tqdm
+
 
 class ConvertDataset:
     """Convert RGB, Depth, and Segmentation samples into pointcloud."""
@@ -45,64 +47,79 @@ class ConvertDataset:
         Returns:
             None
         """
-        # Read the dataset
+        # Collect total number of samples first
+        sample_count = 0
         for root, dirs, files in os.walk(dataset_path, topdown=False):
             for name in files:
                 path = os.path.join(root, name)
-                # Entry point for a sample in a scene based on the file name
+                # Entry point for a sample in a scene
                 if (path[-4:] == '.png' and path[-30:-8] ==
-                   'semantic_segmentation_'):
-                    # Get other file paths related to this sample
-                    scene_folder_directory = path[:-30]
-                    data_id = path[-8:-4]
-                    print(scene_folder_directory, data_id)
-                    segmantic_segmentation_path = path
-                    segmantic_segmentation_labels_path =\
-                        scene_folder_directory +\
-                        'semantic_segmentation_labels_'+data_id+'.json'
-                    rgb_image_path = scene_folder_directory+'rgb_' +\
-                        data_id+'.png'
-                    depth_image_path = scene_folder_directory +\
-                        'distance_to_image_plane_'+data_id+'.npy'
-                    camera_params_path = scene_folder_directory +\
-                        'camera_params_'+data_id+'.json'
-                    occluder_name_path = scene_folder_directory +\
-                        'occluder.pickle'
+                        'semantic_segmentation_'):
+                    sample_count += 1
 
-                    # Read the files
-                    occluder_name =\
-                        self._read_pickle_file(occluder_name_path)[0]
-                    occluder_label = self._get_obj_label(occluder_name)
-                    rgb_image = self._read_image_file(rgb_image_path)
-                    depth_image = np.load(depth_image_path)
-                    seg_image = np.asanyarray(
-                        self._read_image_file(segmantic_segmentation_path))
-                    seg_labels = self._read_json_file(
-                            segmantic_segmentation_labels_path)
-                    camera_params = self._read_json_file(camera_params_path)
+        # Read the dataset
+        with tqdm(total=sample_count, desc="Processing files") as pbar:
+            for root, dirs, files in os.walk(dataset_path, topdown=False):
+                for name in files:
+                    path = os.path.join(root, name)
+                    # Entry point for a sample in a scene
+                    if (path[-4:] == '.png' and path[-30:-8] ==
+                            'semantic_segmentation_'):
+                        # Print progress
+                        pbar.update(1)
+                        # Get other file paths related to this sample
+                        scene_folder_directory = path[:-30]
+                        data_id = path[-8:-4]
+                        segmantic_segmentation_path = path
+                        segmantic_segmentation_labels_path =\
+                            scene_folder_directory +\
+                            'semantic_segmentation_labels_'+data_id+'.json'
+                        rgb_image_path = scene_folder_directory+'rgb_' +\
+                            data_id+'.png'
+                        depth_image_path = scene_folder_directory +\
+                            'distance_to_image_plane_'+data_id+'.npy'
+                        camera_params_path = scene_folder_directory +\
+                            'camera_params_'+data_id+'.json'
+                        occluder_name_path = scene_folder_directory +\
+                            'occluder.pickle'
 
-                    # Get camera intrinsics
-                    cam_K = self._get_camera_intrinsics(camera_params)
+                        # Read the files
+                        occluder_name =\
+                            self._read_pickle_file(occluder_name_path)[0]
+                        occluder_label = self._get_obj_label(occluder_name)
+                        rgb_image = self._read_image_file(rgb_image_path)
+                        depth_image = np.load(depth_image_path)
+                        seg_image = np.asanyarray(
+                            self._read_image_file(segmantic_segmentation_path))
+                        seg_labels = self._read_json_file(
+                                segmantic_segmentation_labels_path)
+                        camera_params =\
+                            self._read_json_file(camera_params_path)
 
-                    # Get camera extrinsics
-                    cam_T = self._get_camera_extrinsics(camera_params)
+                        # Get camera intrinsics
+                        cam_K = self._get_camera_intrinsics(camera_params)
 
-                    # Get a dict with labels as keys and pointclouds as values
-                    classified_scene_sample = self._classify_pointcloud(
-                        rgb_image, depth_image, seg_image, seg_labels,
-                        cam_K, cam_T, camera_params, occluder_label,
-                        minimum_num_of_points, output_num_of_points)
+                        # Get camera extrinsics
+                        cam_T = self._get_camera_extrinsics(camera_params)
 
-                    # Write the classified pointcloud to a CSV file
-                    for label, pointcloud in classified_scene_sample.items():
-                        pointcloud = ";".join([np.array2string(
-                            point, separator=",", precision=3)
-                            for point in pointcloud])
-                        with open(output_path, mode='a', newline='') as file:
-                            writer = csv.writer(file)
-                            if file.tell() == 0:
-                                writer.writerow(["label", "point"])
-                            writer.writerow([label, pointcloud])
+                        # Get a dict with label as key and pointcloud as value
+                        classified_scene_sample = self._classify_pointcloud(
+                            rgb_image, depth_image, seg_image, seg_labels,
+                            cam_K, cam_T, camera_params, occluder_label,
+                            minimum_num_of_points, output_num_of_points)
+
+                        # Write the classified pointcloud to a CSV file
+                        for label, pointcloud in\
+                                classified_scene_sample.items():
+                            pointcloud = ";".join([np.array2string(
+                                point, separator=",", precision=3)
+                                for point in pointcloud])
+                            with open(
+                                    output_path, mode='a', newline='') as file:
+                                writer = csv.writer(file)
+                                if file.tell() == 0:
+                                    writer.writerow(["label", "point"])
+                                writer.writerow([label, pointcloud])
 
     def _classify_pointcloud(self,
                              rgb_image: np.ndarray,
@@ -159,11 +176,15 @@ class ConvertDataset:
                 seg_r = seg_image[y, x][2]
                 seg_g = seg_image[y, x][1]
                 seg_b = seg_image[y, x][0]
+                # Filter out background and unlabellerd pixels
+                if (seg_r == 0 and seg_g == 0 and seg_b == 0):
+                    continue
+                elif (seg_r == 255 and seg_g == 255 and seg_b == 255):
+                    continue
                 argb_string = '({}, {}, {}, 255)'.format(seg_r, seg_g, seg_b)
                 obj_name = seg_labels[argb_string]['class']
-                if (obj_name is None or
-                    obj_name == 'BACKGROUND' or
-                        obj_name == 'UNLABELLED'):
+                if (obj_name is None):
+                    print(f"Object name is None at ({x}, {y})")
                     continue
                 else:
                     obj_label = self._get_obj_label(obj_name)
@@ -217,8 +238,8 @@ class ConvertDataset:
                         num_new_points)
 
         # Print the number of points in each pointcloud
-        for label in classified_pointcloud.keys():
-            print(f"{label}: {classified_pointcloud[label].shape[0]}")
+        # for label in classified_pointcloud.keys():
+            # print(f"{label}: {classified_pointcloud[label].shape[0]}")
         return classified_pointcloud
 
     def _interpolate_point_cloud(self,
@@ -389,7 +410,7 @@ class ConvertDataset:
 
 cd = ConvertDataset()
 cd.convert_dataset(
-    '/home/zhengxiao-han/Downloads/Datasets/msai_dataset/train/scene_4',
-    'output.csv',
-    minimum_num_of_points=2000,
+    '/home/zhengxiao-han/Downloads/Datasets/msai_dataset/train',
+    'train.csv',
+    minimum_num_of_points=3000,
     output_num_of_points=1024)
