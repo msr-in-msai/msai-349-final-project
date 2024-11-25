@@ -6,7 +6,7 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import LabelEncoder
 import ast
-from model import PointNet
+from model import PointNet, pointnetloss
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
@@ -42,22 +42,20 @@ def train_pointnet(model, train_loader, num_epochs=100, learning_rate=0.001, dev
             total_loss = 0
             correct = 0
             total = 0
-            
+
             for batch_idx, (points, labels) in enumerate(train_loader):
+                optimizer.zero_grad()
                 # Move to device and ensure correct shape (B, C, N)
                 points = points.to(device)
                 labels = labels.to(device)
                 points = points.permute(0, 2, 1)  # (B, N, 3) -> (B, 3, N)
-                
-                # Forward pass
-                outputs = model(points)
-                loss = criterion(outputs, labels)
-                
-                # Backward pass and optimize
-                optimizer.zero_grad()
+
+                outputs, m3x3, m64x64 = model(points)
+
+                loss = pointnetloss(outputs, labels, m3x3, m64x64)
                 loss.backward()
                 optimizer.step()
-                
+
                 # Statistics
                 total_loss += loss.item()
                 _, predicted = outputs.max(1)
@@ -85,7 +83,7 @@ def main():
     print(f"Using device: {device}")
     
     # Create dataset and dataloader
-    dataset = PointCloudDataset('data_generation/train.csv')
+    dataset = PointCloudDataset('/home/zhengxiao-han/Downloads/Datasets/msai_dataset/train.csv')
     train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
     print('Dataset loaded!')
     
@@ -98,7 +96,7 @@ def main():
     trained_model = train_pointnet(
         model=model,
         train_loader=train_loader,
-        num_epochs=10000,
+        num_epochs=100,
         learning_rate=0.001,
         device=device
     )
