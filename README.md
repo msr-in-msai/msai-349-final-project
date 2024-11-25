@@ -7,8 +7,10 @@ pip install -r requirements.txt
 ```
 
 ## Dataset
-In `data_generation`:
-* `train.csv`, `valid.csv`, and `test.csv`.
+* In `data_generation`: `train.csv`, `valid.csv`, and `test.csv`.
+
+* Or, use Isaac Sim generated dataset:
+`isaac_sim_dataset`: [https://drive.google.com/drive/folders/1TmDi-Q9Dspz7yKsS8TIOGTSQtLDKZmJr?usp=sharing](https://drive.google.com/drive/folders/1TmDi-Q9Dspz7yKsS8TIOGTSQtLDKZmJr?usp=sharing)
 
 ## Quick Start
 Terminal 1: Launch Tensorboard
