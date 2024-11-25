@@ -1,6 +1,6 @@
 # venv directory
 venv
 */__pycache__
-
+runs
 # saved pytorch models
 *.pth

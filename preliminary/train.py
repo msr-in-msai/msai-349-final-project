@@ -98,7 +98,7 @@ def main():
     trained_model = train_pointnet(
         model=model,
         train_loader=train_loader,
-        num_epochs=1000,
+        num_epochs=10000,
         learning_rate=0.001,
         device=device
     )
