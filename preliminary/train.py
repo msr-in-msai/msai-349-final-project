@@ -83,7 +83,7 @@ def main():
     print(f"Using device: {device}")
     
     # Create dataset and dataloader
-    dataset = PointCloudDataset('/home/zhengxiao-han/Downloads/Datasets/msai_dataset/train.csv')
+    dataset = PointCloudDataset('data_generation/train.csv')
     train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
     print('Dataset loaded!')
     
