@@ -6,7 +6,7 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import LabelEncoder
 import ast
-from model_han import PointNet
+from model import PointNet
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
@@ -80,7 +80,7 @@ def main():
     
     # Create dataset and dataloader
     print('Loading dataset...')
-    dataset = PointCloudDataset('data_generation/train_isaac_sim.csv')
+    dataset = PointCloudDataset('data_generation/train_isaac_sim_3d.csv')
     train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
     print('Dataset loaded!')
     
