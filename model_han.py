@@ -128,12 +128,14 @@ class PointNet(nn.Module):
         x = self.relu(self.bn5(self.dropout(self.fc2(x))))
         x = self.fc3(x)
         output = self.softmax(x)
-        return output
+        return output, t3, t64
     
     def loss(self,
              outputs: torch.Tensor,
              labels: torch.Tensor,
-             regularize_weight: float = 0.001):
+             tnet3: torch.Tensor,
+             tnet64: torch.Tensor,
+             regularize_weight: float = 0.0001):
         """
         Loss function of the PointNet.
 
@@ -141,6 +143,10 @@ class PointNet(nn.Module):
         :type outputs: torch.Tensor
         :param labels: Label tensor of shape (batch_size)
         :type labels: torch.Tensor
+        :param tnet3: Output of the first Tnet.
+        :type tnet3: torch.Tensor
+        :param tnet64: Output of the second Tnet.
+        :type tnet64: torch.Tensor
         :param regularize_weight: Regularization weight.
         :type regularize_weight: float
         """
@@ -154,10 +160,10 @@ class PointNet(nn.Module):
             i3 = i3.cuda()
             i64 = i64.cuda()
         diff3 = i3-torch.bmm(
-            self.tnet3.fc3.weight.view(-1, 3, 3),
-            self.tnet3.fc3.weight.view(-1, 3, 3).transpose(1, 2))
+            tnet3,
+            tnet3.transpose(1, 2))
         diff64 = i64-torch.bmm(
-            self.tnet64.fc3.weight.view(-1, 64, 64),
-            self.tnet64.fc3.weight.view(-1, 64, 64).transpose(1, 2))
+            tnet64,
+            tnet64.transpose(1, 2))
         return criterion(outputs, labels) + regularize_weight * (
             torch.norm(diff3)+torch.norm(diff64)) / float(batch_size)

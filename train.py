@@ -50,9 +50,9 @@ def train_pointnet(model, train_loader, num_epochs=100, learning_rate=0.001, dev
                 labels = labels.to(device)
                 points = points.permute(0, 2, 1)  # (B, N, 3) -> (B, 3, N)
 
-                outputs = model(points)
+                outputs, t3, t64 = model(points)
 
-                loss = model.loss(outputs, labels)
+                loss = model.loss(outputs, labels, t3, t64)
                 loss.backward()
                 optimizer.step()
 
@@ -63,18 +63,13 @@ def train_pointnet(model, train_loader, num_epochs=100, learning_rate=0.001, dev
                 
                 correct += predicted.eq(labels).sum().item()
 
+                # Tensorboard logging
                 writer.add_scalar("Loss/train", loss.item(), epoch)
-                writer.add_scalar("Acc/train", correct/total, epoch)
+                writer.add_scalar("Accuracy/train", correct/total, epoch)
 
                 # Print progress
                 pbar.update(1)
-
-                # if (batch_idx + 1) % 10 == 0:
-                #     print(f'Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(train_loader)}], '
-                #         f'Loss: {loss.item():.4f}, Acc: {100.*correct/total:.2f}%')
-            
-            # print(f'Epoch [{epoch+1}/{num_epochs}], Average Loss: {total_loss/len(train_loader):.4f}, '
-            #       f'Accuracy: {100.*correct/total:.2f}%')
+                pbar.set_postfix_str(f"Loss: {loss.item():.4f}, Acc: {100.*correct/total:.2f}%")
     
     return model
 
@@ -84,6 +79,7 @@ def main():
     print(f"Using device: {device}")
     
     # Create dataset and dataloader
+    print('Loading dataset...')
     dataset = PointCloudDataset('data_generation/train_isaac_sim.csv')
     train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
     print('Dataset loaded!')
