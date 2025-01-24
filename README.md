@@ -1,3 +1,6 @@
+
+<video source src="https://github.com/user-attachments/assets/96de52b8-585c-47f1-b0a0-d733ae5d9ddb"/>
+
 # MSAI Group 6
 Zhengxiao Han, Zhengyang (Kris) Weng, Ben Benyamin
 
